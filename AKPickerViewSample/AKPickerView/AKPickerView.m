@@ -21,6 +21,9 @@
 @property (nonatomic, strong) UIImageView *imageView;
 @property (nonatomic, strong) UIFont *font;
 @property (nonatomic, strong) UIFont *highlightedFont;
+@property (nonatomic, strong) UIColor *textColor;
+@property (nonatomic, strong) UIColor *highlightedTextColor;
+@property (nonatomic, assign) BOOL highlightAnimationDisabled;
 @end
 
 @interface AKCollectionViewLayout : UICollectionViewFlowLayout
@@ -288,11 +291,13 @@
 	if ([self.dataSource respondsToSelector:@selector(pickerView:titleForItem:)]) {
 		NSString *title = [self.dataSource pickerView:self titleForItem:indexPath.item];
 		cell.label.text = title;
-		cell.label.textColor = self.textColor;
-		cell.label.highlightedTextColor = self.highlightedTextColor;
+		cell.label.textColor = (indexPath.item == self.selectedItem) ? self.highlightedTextColor : self.textColor;
 		cell.label.font = self.font;
 		cell.font = self.font;
 		cell.highlightedFont = self.highlightedFont;
+        cell.highlightAnimationDisabled = self.highlightAnimationDisabled;
+        cell.textColor = self.textColor;
+        cell.highlightedTextColor = self.highlightedTextColor;
 		cell.label.bounds = (CGRect){CGPointZero, [self sizeForString:title]};
 		if ([self.delegate respondsToSelector:@selector(pickerView:marginForItem:)]) {
 			CGSize margin = [self.delegate pickerView:self marginForItem:indexPath.item];
@@ -402,7 +407,6 @@
 	self.label.textColor = [UIColor grayColor];
 	self.label.numberOfLines = 1;
 	self.label.lineBreakMode = NSLineBreakByTruncatingTail;
-	self.label.highlightedTextColor = [UIColor blackColor];
 	self.label.font = [UIFont systemFontOfSize:[UIFont systemFontSize]];
 	self.label.autoresizingMask = (UIViewAutoresizingFlexibleTopMargin |
 								   UIViewAutoresizingFlexibleLeftMargin |
@@ -439,12 +443,15 @@
 {
 	[super setSelected:selected];
 
-	CATransition *transition = [CATransition animation];
-	[transition setType:kCATransitionFade];
-	[transition setDuration:0.15];
-	[self.label.layer addAnimation:transition forKey:nil];
+    if (!self.highlightAnimationDisabled) {
+        CATransition *transition = [CATransition animation];
+        [transition setType:kCATransitionFade];
+        [transition setDuration:0.15];
+        [self.label.layer addAnimation:transition forKey:nil];
+    }
 
 	self.label.font = self.selected ? self.highlightedFont : self.font;
+    self.label.textColor = self.selected ? self.highlightedTextColor : self.textColor;
 }
 
 @end
