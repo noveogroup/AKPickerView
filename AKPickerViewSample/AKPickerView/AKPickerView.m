@@ -53,12 +53,14 @@
 	self.textColor = self.textColor ?: [UIColor darkGrayColor];
 	self.highlightedTextColor = self.highlightedTextColor ?: [UIColor blackColor];
 	self.pickerViewStyle = self.pickerViewStyle ?: AKPickerViewStyle3D;
+    self.pickerViewOrientation = self.pickerViewOrientation ?: AKPickerViewOrientationHorisontal;
 	self.maskDisabled = self.maskDisabled;
 
 	[self.collectionView removeFromSuperview];
 	self.collectionView = [[UICollectionView alloc] initWithFrame:self.bounds
 											 collectionViewLayout:[self collectionViewLayout]];
 	self.collectionView.showsHorizontalScrollIndicator = NO;
+    self.collectionView.showsVerticalScrollIndicator = NO;
 	self.collectionView.backgroundColor = [UIColor clearColor];
 	self.collectionView.decelerationRate = UIScrollViewDecelerationRateFast;
 	self.collectionView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
@@ -108,7 +110,12 @@
 
 - (CGSize)intrinsicContentSize
 {
-	return CGSizeMake(UIViewNoIntrinsicMetric, MAX(self.font.lineHeight, self.highlightedFont.lineHeight));
+    if (self.pickerViewOrientation == AKPickerViewOrientationHorisontal) {
+        return CGSizeMake(UIViewNoIntrinsicMetric, MAX(self.font.lineHeight, self.highlightedFont.lineHeight));
+    }
+    else {
+        return CGSizeMake(UIViewNoIntrinsicMetric, UIViewNoIntrinsicMetric);
+    }
 }
 
 - (CGPoint)contentOffset
@@ -148,7 +155,8 @@
 							 (id)[[UIColor clearColor] CGColor],];
 		maskLayer.locations = @[@0.0, @0.33, @0.66, @1.0];
 		maskLayer.startPoint = CGPointMake(0.0, 0.0);
-		maskLayer.endPoint = CGPointMake(1.0, 0.0);
+		maskLayer.endPoint = self.pickerViewOrientation == AKPickerViewOrientationHorisontal ?
+            CGPointMake(1.0, 0.0) : CGPointMake(0.0, 1.0);
 		maskLayer;
 	});
 }
@@ -158,6 +166,13 @@
 - (AKCollectionViewLayout *)collectionViewLayout
 {
 	AKCollectionViewLayout *layout = [AKCollectionViewLayout new];
+    if (self.pickerViewOrientation == AKPickerViewOrientationHorisontal) {
+        layout.scrollDirection = UICollectionViewScrollDirectionHorizontal;
+    }
+    else if (self.pickerViewOrientation == AKPickerViewOrientationVertical) {
+        layout.scrollDirection = UICollectionViewScrollDirectionVertical;
+    }
+    
 	layout.delegate = self;
 	return layout;
 }
@@ -212,8 +227,13 @@
 {
 	switch (self.pickerViewStyle) {
 		case AKPickerViewStyleFlat: {
+            UICollectionViewScrollPosition position =
+                self.pickerViewOrientation == AKPickerViewOrientationHorisontal ?
+                    UICollectionViewScrollPositionCenteredHorizontally :
+                    UICollectionViewScrollPositionCenteredVertically;
+        
 			[self.collectionView scrollToItemAtIndexPath:[NSIndexPath indexPathForItem:item inSection:0]
-										atScrollPosition:UICollectionViewScrollPositionCenteredHorizontally
+										atScrollPosition:position
 												animated:animated];
 			break;
 		}
@@ -316,18 +336,43 @@
 
 - (CGSize)collectionView:(UICollectionView *)collectionView layout:(UICollectionViewLayout *)collectionViewLayout sizeForItemAtIndexPath:(NSIndexPath *)indexPath
 {
-	CGSize size = CGSizeMake(self.interitemSpacing, collectionView.bounds.size.height);
-	if ([self.dataSource respondsToSelector:@selector(pickerView:titleForItem:)]) {
-		NSString *title = [self.dataSource pickerView:self titleForItem:indexPath.item];
-		size.width += [self sizeForString:title].width;
-		if ([self.delegate respondsToSelector:@selector(pickerView:marginForItem:)]) {
-			CGSize margin = [self.delegate pickerView:self marginForItem:indexPath.item];
-			size.width += margin.width * 2;
-		}
-	} else if ([self.dataSource respondsToSelector:@selector(pickerView:imageForItem:)]) {
-		UIImage *image = [self.dataSource pickerView:self imageForItem:indexPath.item];
-		size.width += image.size.width;
-	}
+	CGSize size;
+    if (self.pickerViewOrientation == AKPickerViewOrientationHorisontal) {
+        size = CGSizeMake(self.interitemSpacing, collectionView.bounds.size.height);
+        
+        if ([self.dataSource respondsToSelector:@selector(pickerView:titleForItem:)]) {
+            NSString *title = [self.dataSource pickerView:self titleForItem:indexPath.item];
+            size.width += [self sizeForString:title].width;
+            if ([self.delegate respondsToSelector:@selector(pickerView:marginForItem:)]) {
+                CGSize margin = [self.delegate pickerView:self marginForItem:indexPath.item];
+                size.width += margin.width * 2;
+            }
+        }
+        else if ([self.dataSource respondsToSelector:@selector(pickerView:imageForItem:)]) {
+            UIImage *image = [self.dataSource pickerView:self imageForItem:indexPath.item];
+            size.width += image.size.width;
+        }
+    }
+    else if (self.pickerViewOrientation == AKPickerViewOrientationVertical) {
+        size = CGSizeMake(collectionView.bounds.size.width, self.interitemSpacing);
+        
+        if ([self.dataSource respondsToSelector:@selector(pickerView:titleForItem:)]) {
+            NSString *title = [self.dataSource pickerView:self titleForItem:indexPath.item];
+            size.height += [self sizeForString:title].height;
+            if ([self.delegate respondsToSelector:@selector(pickerView:marginForItem:)]) {
+                CGSize margin = [self.delegate pickerView:self marginForItem:indexPath.item];
+                size.height += margin.height * 2;
+            }
+        }
+        else if ([self.dataSource respondsToSelector:@selector(pickerView:imageForItem:)]) {
+            UIImage *image = [self.dataSource pickerView:self imageForItem:indexPath.item];
+            size.height += image.size.height;
+        }
+    }
+    else {
+        NSAssert(NO, @"Unexpected AKPickerView orientation value.");
+    }
+
 	return size;
 }
 
@@ -348,8 +393,18 @@
 	CGSize firstSize = [self collectionView:collectionView layout:collectionViewLayout sizeForItemAtIndexPath:firstIndexPath];
 	NSIndexPath *lastIndexPath = [NSIndexPath indexPathForItem:number - 1 inSection:section];
 	CGSize lastSize = [self collectionView:collectionView layout:collectionViewLayout sizeForItemAtIndexPath:lastIndexPath];
-	return UIEdgeInsetsMake(0, (collectionView.bounds.size.width - firstSize.width) / 2,
-							0, (collectionView.bounds.size.width - lastSize.width) / 2);
+    
+    if (self.pickerViewOrientation == AKPickerViewOrientationHorisontal) {
+        return UIEdgeInsetsMake(0, (collectionView.bounds.size.width - firstSize.width) / 2,
+            0, (collectionView.bounds.size.width - lastSize.width) / 2);
+    }
+    else if (self.pickerViewOrientation == AKPickerViewOrientationVertical) {
+        return UIEdgeInsetsMake((collectionView.bounds.size.height - firstSize.height) / 2, 0,
+            (collectionView.bounds.size.height - lastSize.height) / 2, 0);
+    }
+
+    NSAssert(NO, @"Unexpected AKPickerView orientation value.");
+    return UIEdgeInsetsZero;
 }
 
 - (void)collectionView:(UICollectionView *)collectionView didSelectItemAtIndexPath:(NSIndexPath *)indexPath
@@ -457,8 +512,8 @@
 @end
 
 @interface AKCollectionViewLayout ()
-@property (nonatomic, assign) CGFloat width;
-@property (nonatomic, assign) CGFloat midX;
+@property (nonatomic, assign) CGSize size;
+@property (nonatomic, assign) CGPoint midPoint;
 @property (nonatomic, assign) CGFloat maxAngle;
 @end
 
@@ -478,8 +533,8 @@
 - (void)prepareLayout
 {
 	CGRect visibleRect = (CGRect){self.collectionView.contentOffset, self.collectionView.bounds.size};
-	self.midX = CGRectGetMidX(visibleRect);
-	self.width = CGRectGetWidth(visibleRect) / 2;
+	self.midPoint = (CGPoint) {CGRectGetMidX(visibleRect), CGRectGetMidY(visibleRect)};
+    self.size = (CGSize) {CGRectGetWidth(visibleRect) / 2, CGRectGetHeight(visibleRect) / 2};
 	self.maxAngle = M_PI_2;
 }
 
@@ -496,12 +551,22 @@
 			return attributes; break;
 		}
 		case AKPickerViewStyle3D: {
-			CGFloat distance = CGRectGetMidX(attributes.frame) - self.midX;
-			CGFloat currentAngle = self.maxAngle * distance / self.width / M_PI_2;
 			CATransform3D transform = CATransform3DIdentity;
-			transform = CATransform3DTranslate(transform, -distance, 0, -self.width);
-			transform = CATransform3DRotate(transform, currentAngle, 0, 1, 0);
-			transform = CATransform3DTranslate(transform, 0, 0, self.width);
+            CGFloat currentAngle;
+            if (self.scrollDirection == UICollectionViewScrollDirectionHorizontal) {
+                CGFloat distance = CGRectGetMidX(attributes.frame) - self.midPoint.x;
+                currentAngle = self.maxAngle * distance / self.size.width / M_PI_2;
+                transform = CATransform3DTranslate(transform, -distance, 0, -self.size.width);
+                transform = CATransform3DRotate(transform, currentAngle, 0, 1, 0);
+                transform = CATransform3DTranslate(transform, 0, 0, self.size.width);
+            }
+            else {
+                CGFloat distance = CGRectGetMidY(attributes.frame) - self.midPoint.y;
+                currentAngle = self.maxAngle * distance / self.size.height / M_PI_2;
+                transform = CATransform3DTranslate(transform, 0, -distance, -self.size.height);
+                transform = CATransform3DRotate(transform, currentAngle, 1, 0, 0);
+                transform = CATransform3DTranslate(transform, 0, 0, -self.size.height);
+            }
 			attributes.transform3D = transform;
 			attributes.alpha = (ABS(currentAngle) < self.maxAngle);
 			return attributes; break;
