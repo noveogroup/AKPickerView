@@ -2,10 +2,10 @@ Pod::Spec.new do |s|
 
   s.name         = "AKPickerView"
   s.version      = "0.2.5"
-  s.summary      = "A simple yet customizable horizontal picker view."
+  s.summary      = "A simple yet customizable picker view."
 
   s.description  = <<-DESC
-A simple yet customizable horizontal picker view. Works on iOS 6,7 and 8.
+A simple yet customizable picker view. Works on iOS 6, 7 and 8.
                    DESC
 
   s.homepage     = "https://github.com/Akkyie/AKPickerView"
@@ -18,7 +18,7 @@ A simple yet customizable horizontal picker view. Works on iOS 6,7 and 8.
   s.platform     = :ios
   s.platform     = :ios, "6.0"
 
-  s.source       = { :git => "https://github.com/Akkyie/AKPickerView.git", :tag => s.version }
+  s.source       = { :git => "https://github.com/noveogroup/AKPickerView.git", :tag => s.version }
 
   s.source_files  = "AKPickerViewSample/AKPickerView/AKPickerView.{h,m}"
 
