@@ -211,14 +211,16 @@
 	for (NSInteger i = 0; i < item; i++) {
 		NSIndexPath *indexPath = [NSIndexPath indexPathForItem:i inSection:0];
 		CGSize cellSize = [self collectionView:self.collectionView layout:self.collectionView.collectionViewLayout sizeForItemAtIndexPath:indexPath];
-		offset += cellSize.width;
+        offset += self.pickerViewOrientation == AKPickerViewOrientationHorisontal ?
+            cellSize.width : cellSize.height;
 	}
 
 	NSIndexPath *firstIndexPath = [NSIndexPath indexPathForItem:0 inSection:0];
 	CGSize firstSize = [self collectionView:self.collectionView layout:self.collectionView.collectionViewLayout sizeForItemAtIndexPath:firstIndexPath];
 	NSIndexPath *selectedIndexPath = [NSIndexPath indexPathForItem:item inSection:0];
 	CGSize selectedSize = [self collectionView:self.collectionView layout:self.collectionView.collectionViewLayout sizeForItemAtIndexPath:selectedIndexPath];
-	offset -= (firstSize.width - selectedSize.width) / 2;
+	offset -= self.pickerViewOrientation == AKPickerViewOrientationHorisontal ?
+        (firstSize.width - selectedSize.width) / 2 : (firstSize.height - selectedSize.height) / 2;
 
 	return offset;
 }
@@ -238,8 +240,16 @@
 			break;
 		}
 		case AKPickerViewStyle3D: {
-			[self.collectionView setContentOffset:CGPointMake([self offsetForItem:item], self.collectionView.contentOffset.y)
-										 animated:animated];
+            if (self.pickerViewOrientation == AKPickerViewOrientationHorisontal) {
+                [self.collectionView setContentOffset:
+                    CGPointMake([self offsetForItem:item], self.collectionView.contentOffset.y)
+                    animated:animated];
+            }
+            else {
+                [self.collectionView setContentOffset:
+                    CGPointMake(self.collectionView.contentOffset.x, [self offsetForItem:item])
+                    animated:animated];
+            }
 			break;
 		}
 		default: break;
@@ -279,10 +289,16 @@
 				for (NSUInteger i = 0; i < [self collectionView:self.collectionView numberOfItemsInSection:0]; i++) {
 					NSIndexPath *indexPath = [NSIndexPath indexPathForItem:i inSection:0];
 					AKCollectionViewCell *cell = (AKCollectionViewCell *)[self.collectionView cellForItemAtIndexPath:indexPath];
-					if ([self offsetForItem:i] + cell.bounds.size.width / 2 > self.collectionView.contentOffset.x) {
-						[self selectItem:i animated:YES];
-						break;
-					}
+                    CGFloat cellCenter = [self offsetForItem:i] +
+                        (self.pickerViewOrientation == AKPickerViewOrientationHorisontal ?
+                            cell.bounds.size.width / 2 : cell.bounds.size.height / 2);
+                    CGFloat contentOffset = self.pickerViewOrientation == AKPickerViewOrientationHorisontal ?
+                        self.collectionView.contentOffset.x : self.collectionView.contentOffset.y;
+                    
+                    if (cellCenter > contentOffset) {
+                        [self selectItem:i animated:YES];
+                        break;
+                    }
 				}
 			}
 			break;
