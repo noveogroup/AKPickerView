@@ -467,12 +467,20 @@
 
 - (void)scrollViewDidScroll:(UIScrollView *)scrollView
 {
-	if ([self.delegate respondsToSelector:@selector(scrollViewDidScroll:)])
+	if ([self.delegate respondsToSelector:@selector(scrollViewDidScroll:)]) {
 		[self.delegate scrollViewDidScroll:scrollView];
+    }
+
+    if (self.selectWhileScrolling) {
+        CGPoint center = [self convertPoint:self.collectionView.center toView:self.collectionView];
+        NSIndexPath *indexPath = [self.collectionView indexPathForItemAtPoint:center];
+        [self.collectionView selectItemAtIndexPath:indexPath animated:!self.highlightAnimationDisabled
+            scrollPosition:UICollectionViewScrollPositionNone];
+        self.selectedItem = indexPath.item;
+    }
 
 	[CATransaction begin];
-	[CATransaction setValue:(id)kCFBooleanTrue
-					 forKey:kCATransactionDisableActions];
+	[CATransaction setValue:(id)kCFBooleanTrue forKey:kCATransactionDisableActions];
 	self.collectionView.layer.mask.frame = self.collectionView.bounds;
 	[CATransaction commit];
 }
