@@ -471,7 +471,7 @@
 		[self.delegate scrollViewDidScroll:scrollView];
     }
 
-    if (self.selectWhileScrolling) {
+    if (self.selectWhileScrolling && self.pickerViewStyle == AKPickerViewStyleFlat) {
         CGPoint center = [self convertPoint:self.collectionView.center toView:self.collectionView];
         NSIndexPath *indexPath = [self.collectionView indexPathForItemAtPoint:center];
         [self.collectionView selectItemAtIndexPath:indexPath animated:!self.highlightAnimationDisabled
