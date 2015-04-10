@@ -55,6 +55,7 @@
 	self.pickerViewStyle = self.pickerViewStyle ?: AKPickerViewStyle3D;
     self.pickerViewOrientation = self.pickerViewOrientation ?: AKPickerViewOrientationHorisontal;
 	self.maskDisabled = self.maskDisabled;
+    self.fasterDeceleration = self.fasterDeceleration;
 
 	[self.collectionView removeFromSuperview];
 	self.collectionView = [[UICollectionView alloc] initWithFrame:self.bounds
@@ -161,6 +162,13 @@
 	});
 }
 
+- (void)setFasterDeceleration:(BOOL)fasterDeceleration
+{
+    _fasterDeceleration = fasterDeceleration;
+    self.collectionView.decelerationRate = fasterDeceleration ? UIScrollViewDecelerationRateFast :
+        UIScrollViewDecelerationRateNormal;
+}
+
 #pragma mark -
 
 - (AKCollectionViewLayout *)collectionViewLayout
@@ -229,27 +237,38 @@
 {
 	switch (self.pickerViewStyle) {
 		case AKPickerViewStyleFlat: {
-            UICollectionViewScrollPosition position =
-                self.pickerViewOrientation == AKPickerViewOrientationHorisontal ?
-                    UICollectionViewScrollPositionCenteredHorizontally :
-                    UICollectionViewScrollPositionCenteredVertically;
-        
-			[self.collectionView scrollToItemAtIndexPath:[NSIndexPath indexPathForItem:item inSection:0]
-										atScrollPosition:position
-												animated:animated];
+            if (self.fasterDeceleration && animated) {
+                [UIView animateWithDuration:0.1 animations:^{
+                    [self.collectionView scrollToItemAtIndexPath:[NSIndexPath indexPathForItem:item inSection:0]
+                        atScrollPosition:UICollectionViewScrollPositionCenteredHorizontally |
+                        UICollectionViewScrollPositionCenteredVertically animated:NO];
+                }];
+            }
+            else {
+                [self.collectionView scrollToItemAtIndexPath:[NSIndexPath indexPathForItem:item inSection:0]
+                    atScrollPosition:UICollectionViewScrollPositionCenteredHorizontally |
+                    UICollectionViewScrollPositionCenteredVertically animated:animated];
+            }
 			break;
 		}
 		case AKPickerViewStyle3D: {
+            CGPoint offset;
             if (self.pickerViewOrientation == AKPickerViewOrientationHorisontal) {
-                [self.collectionView setContentOffset:
-                    CGPointMake([self offsetForItem:item], self.collectionView.contentOffset.y)
-                    animated:animated];
+                offset = CGPointMake([self offsetForItem:item], self.collectionView.contentOffset.y);
             }
             else {
-                [self.collectionView setContentOffset:
-                    CGPointMake(self.collectionView.contentOffset.x, [self offsetForItem:item])
-                    animated:animated];
+                offset = CGPointMake(self.collectionView.contentOffset.x, [self offsetForItem:item]);
             }
+            
+            if (self.fasterDeceleration) {
+                [UIView animateWithDuration:0.1 animations:^{
+                    [self.collectionView setContentOffset:offset];
+                }];
+            }
+            else {
+                [self.collectionView setContentOffset:offset animated:animated];
+            }
+            
 			break;
 		}
 		default: break;
